@@ -64,7 +64,7 @@ class TestSerialization(unittest.TestCase):
         request = object()
         d = self.user.__json__(object())
         assert d['name'] == 'ralphbean'
-        assert isinstance(d['name'], unicode)
+        assert isinstance(d['name'], str)
 
     def test_boolean_serialization(self):
         request = object()

@@ -32,11 +32,11 @@ def resources_view(request):
             results = []
             for obj in request.context:
                 json = obj.__json__(request)
-                results.append(dict(json.items() + parent_pks.items()))
+                results.append(dict(list(json.items()) + list(parent_pks.items())))
 
             return results
         else:
-            return dict(results.items() + parent_pks.items())
+            return dict(list(results.items()) + list(parent_pks.items()))
 
     elif request.method == 'POST' or request.method == 'PUT':
         if isinstance(request.context, SQLAlchemyRoot):

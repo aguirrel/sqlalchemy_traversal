@@ -11,7 +11,7 @@ from sqlalchemy.orm.exc   import NoResultFound
 from sqlalchemy.exc       import ProgrammingError
 from sqlalchemy.exc       import DataError
 
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 class QueryGetItem(object):
     """
@@ -141,7 +141,7 @@ class TraversalRoot(object):
 
         # Loop through all the tables in the SQLAlchemy registry
         # and store them if they subclass the TraversalMixin
-        for key, table in self.base._decl_class_registry.iteritems():
+        for key, table in self.base._decl_class_registry.items():
             if isinstance(table, type) and issubclass(table, TraversalMixin):
                 table.__parent__ = self
                 self.tables[table.__tablename__] = table
@@ -179,7 +179,7 @@ class TraversalRoot(object):
         # This is used to shortcircuit the traversal, if we are ending
         # on a model, for instance /api/user then we should either be creating
         # a new instance or querying the table
-        path = urllib.unquote(self.request.path)
+        path = urllib.parse.unquote(self.request.path)
 
         if path.endswith(key):
             if self.request.method == 'GET':

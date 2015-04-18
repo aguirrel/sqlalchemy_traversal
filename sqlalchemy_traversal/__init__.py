@@ -17,7 +17,7 @@ from zope.interface                     import providedBy
 import colander
 import venusian
 import re
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 def get_order_by(order_string):
     final_orders = []
@@ -127,7 +127,7 @@ def filter_query(filters, query, cls):
             elif command == 'not_in':
                 query = query.filter(not_(prop.in_(args)))
 
-    for key, value in filters.iteritems():
+    for key, value in filters.items():
         if key == 'limit':
             query = query.limit(value[1])
             query = query.offset(value[0])
@@ -157,21 +157,21 @@ def filter_list(filters, list_, cls):
             args = type_cleaner(args)
 
         if command == 'equals':
-            list_ = filter(lambda x: getattr(x, column) == args, list_)
+            list_ = [x for x in list_ if getattr(x, column) == args]
         elif command == 'not_equals':
-            list_ = filter(lambda x: getattr(x, column) != args, list_)
+            list_ = [x for x in list_ if getattr(x, column) != args]
         elif command == 'starts_with':
-            list_ = filter(lambda x: getattr(x, column).startswith(args), list_)
+            list_ = [x for x in list_ if getattr(x, column).startswith(args)]
         elif command == 'ends_with':
-            list_ = filter(lambda x: getattr(x, column).endswith(args), list_)
+            list_ = [x for x in list_ if getattr(x, column).endswith(args)]
         elif command == 'contains':
-            list_ = filter(lambda x: args in getattr(x, column), list_)
+            list_ = [x for x in list_ if args in getattr(x, column)]
         elif command == 'in':
-            list_ = filter(lambda x: getattr(x, column) in args, list_)
+            list_ = [x for x in list_ if getattr(x, column) in args]
         elif command == 'not_in':
-            list_ = filter(lambda x: getattr(x, column) not in args, list_)
+            list_ = [x for x in list_ if getattr(x, column) not in args]
 
-    for key, value in filters.iteritems():
+    for key, value in filters.items():
         if key == 'limit':
             list_ = list_[value[0]:value[1]]
         elif key == 'order_by':
@@ -221,7 +221,7 @@ def filter_list_by_qs(qs, collection):
                     collection.sort(key=lambda x: getattr(x, order), reverse=True)
 
 
-    for key, value in qs.iteritems():
+    for key, value in qs.items():
         if '.in' in key:
             key = key[0:-3]
             values = value.split(',')
@@ -297,7 +297,7 @@ def filter_query_by_qs(session, cls, qs, existing_query=None):
             else:
                 query = query.order_by(prop.asc())
 
-    for key, value in qs.iteritems():
+    for key, value in qs.items():
         if '.in' in key:
             key = key[0:-3]
             prop = getattr(cls, key)
@@ -480,7 +480,7 @@ class JsonSerializableMixin(TraversalBase):
             # is not possible, convert it to a byte string.
             if attr and not isinstance(attr, (int, float)):
                 try:
-                    props[key] = unicode(attr)
+                    props[key] = str(attr)
                 except UnicodeDecodeError:
                     props[key] = str(attr)  # .encode('utf-8')
                 continue
@@ -518,7 +518,7 @@ class ModelCollection(TraversalBase):
         on the model itself unless the key is an integer, in which case we
         will use standard indexing
         """
-        if isinstance(key, (str, unicode)):
+        if isinstance(key, str):
             for obj in self.collection:
                 data = getattr(obj, obj._traversal_lookup_key)
 
@@ -603,7 +603,7 @@ class TraversalMixin(JsonSerializableMixin):
         if hasattr(self, '_request'):
             #TODO: Lets make this less of a hack
             # POST means "create", so we are always looking for a class
-            path = urllib.unquote(self._request.path)
+            path = urllib.parse.unquote(self._request.path)
 
             if self._request.method == 'POST' and path.endswith(attribute):
 
@@ -628,7 +628,7 @@ class TraversalMixin(JsonSerializableMixin):
                 #filter_query_by_qs(session, obj, self._request.GET)
 
             try:
-                ignore_types = (str, unicode, int, float, TraversalMixin)
+                ignore_types = (str, str, int, float, TraversalMixin)
                 if not isinstance(obj, ignore_types):
                     # is this is a collection
                     iter(obj)
@@ -673,9 +673,9 @@ class register_save(object):
             session = get_session(request)
 
             if request.is_xhr:
-                post_items = request.json.items()
+                post_items = list(request.json.items())
             else:
-                post_items = request.POST.items()
+                post_items = list(request.POST.items())
 
             schema = self.schema()
             schema = schema.bind(request=request)
@@ -688,12 +688,12 @@ class register_save(object):
                     'errors': format_colander_errors(e)
                 }
 
-                return dict(error_dict.items() + post_items)
+                return dict(list(error_dict.items()) + post_items)
 
             # cleaned dictionary data from the save function
             result = wrapped(request, data)
 
-            for key, value in result.iteritems():
+            for key, value in result.items():
                 setattr(request.context, key, value)
 
             try:
@@ -705,7 +705,7 @@ class register_save(object):
                     if e.__class__ in self.exception_handlers:
                         new_errors = self.exception_handlers[e.__class__](request.context, e)
 
-                        return dict(error_dict.items() + new_errors.items())
+                        return dict(list(error_dict.items()) + list(new_errors.items()))
 
                 error_dict['message']  = e.message
                 return error_dict
